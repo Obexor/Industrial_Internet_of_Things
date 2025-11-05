@@ -7,67 +7,49 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 
 void connectWiFi() {
+    WiFi.disconnect();
     Serial.print("Connecting to WiFi...");
     printf("SSID: %s\n", WIFI_SSID);
     printf("Password: %s\n", WIFI_PASSWORD);
+    //WiFi.mode(WIFI_STA); // Set WiFi to station mode (client mode)
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
     int retryCount = 0;
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
+    const int maxRetries = 30;  // Set a maximum number of connection attempts
+    // Retry loop
+    while (WiFi.status() != WL_CONNECTED && retryCount < maxRetries) {
+        delay(5000); // 1-second delay to allow the watchdog to reset
         Serial.print(".");
         retryCount++;
 
-        // If we keep failing to connect after a set number of attempts
-        if (retryCount > 2) {
-            Serial.println("\nWiFi connection failed. Restarting...");
-            ESP.restart();
-        }
+        // Print connection status codes (optional debugging)
+        Serial.print(" WiFi.status(): ");
+        Serial.println(WiFi.status());
     }
 
-    Serial.println("\nWiFi connected!");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-}
-
-void connectMQTT() {
-    Serial.print("Connecting to MQTT Broker...");
-
-    mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
-    while (!mqttClient.connected()) {
-        Serial.println("");
-        Serial.print("Attempting MQTT connection...");
-
-        // Try to connect to the broker with credentials
-        if (mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD)) {
-            Serial.println("Connected to MQTT broker!");
-        } else {
-            Serial.print("Failed to connect, rc=");
-            Serial.print(mqttClient.state());
-            Serial.println(". Retrying in 5 seconds...");
-            delay(5000);
-        }
+    // Check if connection was successful
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("\nConnected to WiFi!");
+        Serial.print("IP Address: ");
+        Serial.println(WiFi.localIP());
+    } else {
+        Serial.println("\nFailed to connect to WiFi after maximum retries.");
+        Serial.println("Restarting...");
+        delay(5000); // Give time for serial output before restarting
+        ESP.restart(); // Restart the ESP
     }
 }
 
-void mqttCallback(char* topic, byte* message, unsigned int length) {
-    Serial.print("Message received on topic: ");
-    Serial.print(topic);
-    Serial.print(". Message: ");
-    for (int i = 0; i < length; i++) {
-        Serial.print((char)message[i]);
-    }
-    Serial.println();
-}
 
 void setup() {
     Serial.begin(115200);
+    // Initialize serial communication
+    delay(100);           // Small delay to stabilize
+    connectWiFi();        // Attempt to connect to WiFi
 
-    // Connect to WiFi
-    connectWiFi();
 }
 
 void loop() {
-
-
+    // Connect to WiFi
+    delay(1000);
 }
