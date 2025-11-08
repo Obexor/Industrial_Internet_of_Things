@@ -1,55 +1,48 @@
-#include <Arduino.h>
-#include <WiFi.h>              // For WiFi connection (use ESP8266WiFi.h for ESP8266)
-#include <PubSubClient.h>      // MQTT Library
-#include "settings.h"          // Include the settings.h configuration file
+#include <WiFi.h>
+#include <settings.h>
 
-WiFiClient wifiClient;
-PubSubClient mqttClient(wifiClient);
+// Function to handle Wi-Fi connection with auto-reconnect
+void connectToWiFi(const char* ssid, const char* password) {
+    Serial.println("Connecting to Wi-Fi...");
+    WiFi.mode(WIFI_STA);  // Set Wi-Fi to station mode
+    WiFi.begin(ssid, password);  // Start Wi-Fi connection
 
-void connectWiFi() {
-    WiFi.disconnect();
-    Serial.print("Connecting to WiFi...");
-    printf("SSID: %s\n", WIFI_SSID);
-    printf("Password: %s\n", WIFI_PASSWORD);
-    //WiFi.mode(WIFI_STA); // Set WiFi to station mode (client mode)
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    unsigned long startAttemptTime = millis();
+    const unsigned long connectionTimeout = 10000;  // 10 seconds timeout
 
-    int retryCount = 0;
-    const int maxRetries = 30;  // Set a maximum number of connection attempts
-    // Retry loop
-    while (WiFi.status() != WL_CONNECTED && retryCount < maxRetries) {
-        delay(5000); // 1-second delay to allow the watchdog to reset
+    // Try to connect for max connectionTimeout
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < connectionTimeout) {
         Serial.print(".");
-        retryCount++;
-
-        // Print connection status codes (optional debugging)
-        Serial.print(" WiFi.status(): ");
-        Serial.println(WiFi.status());
+        delay(500);
     }
 
-    // Check if connection was successful
+    // Check if the Wi-Fi connection was successful
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("\nConnected to WiFi!");
+        Serial.println("\nConnected!");
         Serial.print("IP Address: ");
         Serial.println(WiFi.localIP());
     } else {
-        Serial.println("\nFailed to connect to WiFi after maximum retries.");
-        Serial.println("Restarting...");
-        delay(5000); // Give time for serial output before restarting
-        ESP.restart(); // Restart the ESP
+        Serial.println("\nFailed to connect to Wi-Fi");
     }
 }
 
+// Function to automatically reconnect if Wi-Fi is disconnected
+void handleWiFiReconnect() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("Wi-Fi lost. Reconnecting...");
+        connectToWiFi(WIFI_SSID, WIFI_PASSWORD);
+    }
+}
 
 void setup() {
     Serial.begin(115200);
-    // Initialize serial communication
-    delay(100);           // Small delay to stabilize
-    connectWiFi();        // Attempt to connect to WiFi
+    delay(1000);
 
+    connectToWiFi(WIFI_SSID, WIFI_PASSWORD); // Initial Wi-Fi connection
 }
 
 void loop() {
-    // Connect to WiFi
+    handleWiFiReconnect();  // Ensure Wi-Fi stays connected
+    // Your main code here
     delay(1000);
 }
