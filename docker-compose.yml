@@ -39,9 +39,9 @@ services:
       #   MQTT_URL=tcp://broker.hivemq.com:1883
       #   MQTT_URL=tcp://192.168.1.25:1883
       #   MQTT_URL=ssl://your-broker.example.com:8883
-      - MQTT_URL=tcp://mosquitto:1883
-      - MQTT_USERNAME=
-      - MQTT_PASSWORD=
+      - MQTT_URL=tcp://158.180.44.197:1883
+      - MQTT_USERNAME=bobm
+      - MQTT_PASSWORD=letmein
     volumes:
       - ./ops/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
 

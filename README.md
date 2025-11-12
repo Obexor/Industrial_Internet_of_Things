@@ -54,8 +54,8 @@ platformio.ini sets:
 To use a different board, change the board in platformio.ini or add a new [env:<name>] section.
 
 
-## Build with Docker
-If you don't want to install PlatformIO locally, you can use the provided Dockerfile to build the firmware.
+## Build and Upload (Flash) with Docker
+If you don't want to install PlatformIO locally, you can use the provided Dockerfile to build the firmware — and you can also upload the built firmware to your ESP32 directly from the container.
 
 1) Build the image
 - Windows PowerShell:
@@ -63,15 +63,37 @@ If you don't want to install PlatformIO locally, you can use the provided Docker
 - macOS/Linux:
   - docker build -t iiot-esp32 .
 
-2) Run a build for the default environment (esp32vn-iot-uno)
+2) Build for the default environment (esp32vn-iot-uno)
 - Windows PowerShell (mount current directory):
-  - docker run --rm -v ${PWD}:/workspace -w /workspace iiot-esp32 pio run -e esp32vn-iot-uno
-  - If ${PWD} does not expand correctly, try: docker run --rm -v %cd%:/workspace -w /workspace iiot-esp32 pio run -e esp32vn-iot-uno
+  - docker run --rm -v ${PWD}:/workspace -w /workspace iiot-esp32
+  - If ${PWD} does not expand correctly, try: docker run --rm -v %cd%:/workspace -w /workspace iiot-esp32
 - macOS/Linux:
-  - docker run --rm -v "$PWD":/workspace -w /workspace iiot-esp32 pio run -e esp32vn-iot-uno
+  - docker run --rm -v "$PWD":/workspace -w /workspace iiot-esp32
+
+3) Upload (flash) the firmware from Docker
+- Linux (typical serial device is /dev/ttyUSB0 or /dev/ttyACM0):
+  - docker run --rm \
+      --device=/dev/ttyUSB0 \
+      -e ACTION=upload \
+      -e UPLOAD_PORT=/dev/ttyUSB0 \
+      -v "$PWD":/workspace -w /workspace iiot-esp32
+- macOS (typical device is /dev/cu.SLAB_USBtoUART or /dev/cu.usbserial-xxxx):
+  - docker run --rm \
+      --device=/dev/cu.SLAB_USBtoUART \
+      -e ACTION=upload \
+      -e UPLOAD_PORT=/dev/cu.SLAB_USBtoUART \
+      -v "$PWD":/workspace -w /workspace iiot-esp32
+- Optional: Serial monitor from Docker (after mapping the device):
+  - docker run --rm --device=/dev/ttyUSB0 -e ACTION=monitor -e UPLOAD_PORT=/dev/ttyUSB0 -v "$PWD":/workspace -w /workspace iiot-esp32
+
+Windows note:
+- Docker Desktop on Windows does not reliably pass COM ports into Linux containers. For uploading, either:
+  1) Use PlatformIO on the host (VS Code + PlatformIO or `pip install platformio` and run `pio run -t upload`).
+  2) Use WSL with USB/serial passthrough solutions, or connect the device to a Linux/macOS machine for the flashing step.
 
 Notes:
-- Uploading to the board from inside Docker requires passing the serial device through and appropriate permissions, e.g. on Linux: --device=/dev/ttyUSB0 --group-add dialout. On Windows and macOS Docker Desktop, USB passthrough to Linux containers is limited; typically you build in Docker but upload using PlatformIO on the host.
+- Uploading from Docker requires passing the serial device through and appropriate permissions, e.g. on Linux: `--device=/dev/ttyUSB0` (you may also need to add your user to the `dialout` group on the host).
+- On Windows, USB serial passthrough to Linux containers is limited; prefer uploading from the host PlatformIO as described above.
 - The first build will download the ESP32 toolchain and libraries; subsequent builds are faster due to Docker layer caching.
 
 

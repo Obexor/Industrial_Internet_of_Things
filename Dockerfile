@@ -41,5 +41,9 @@ RUN pio pkg install -e esp32vn-iot-uno --project-dir /tmp || true \
 # Reset workdir; at runtime the host project should be mounted at /workspace
 WORKDIR /workspace
 
-# Default command builds the provided environment
-CMD ["pio", "run", "-e", "esp32vn-iot-uno"]
+# Helper script to build or upload using PlatformIO inside this container
+COPY scripts/pio-docker.sh /usr/local/bin/pio-docker.sh
+RUN chmod +x /usr/local/bin/pio-docker.sh
+
+# Default command runs helper which builds by default; set ACTION=upload to flash
+CMD ["/usr/local/bin/pio-docker.sh"]

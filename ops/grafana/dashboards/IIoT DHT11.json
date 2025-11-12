@@ -18,7 +18,7 @@
       "targets": [
         {
           "datasource": {"type": "influxdb", "uid": "InfluxDB IIoT"},
-          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)",
+          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r.unit == \"°C\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)",
           "refId": "A"
         }
       ],
@@ -31,7 +31,7 @@
       "targets": [
         {
           "datasource": {"type": "influxdb", "uid": "InfluxDB IIoT"},
-          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r.unit == \"%\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)",
+          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r.unit == \"%\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)",
           "refId": "A"
         }
       ],
@@ -44,7 +44,7 @@
       "targets": [
         {
           "datasource": {"type": "influxdb", "uid": "InfluxDB IIoT"},
-          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r.unit == \"°C\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r.unit == \"°C\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [])\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
           "refId": "A"
         }
       ]
@@ -56,7 +56,7 @@
       "targets": [
         {
           "datasource": {"type": "influxdb", "uid": "InfluxDB IIoT"},
-          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r.unit == \"%\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r.unit == \"%\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> group(columns: [])\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
           "refId": "A"
         }
       ]
@@ -75,6 +75,7 @@
       "multi": true
     }
   ]},
+  "refresh": "10s",
   "time": {"from": "now-6h", "to": "now"},
   "timezone": "browser",
   "title": "IIoT DHT11",
