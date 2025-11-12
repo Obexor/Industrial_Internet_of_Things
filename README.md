@@ -129,27 +129,34 @@ Files added:
 - ops/grafana/dashboards/IIoT DHT11.json
 
 Quick start:
-1) Start the stack
+1) Configure the stack to use YOUR MQTT broker (not a local one)
+   - Open docker-compose.yml and in the telegraf service set the environment variable MQTT_URL to your broker:
+     - Examples:
+       - MQTT_URL=tcp://broker.hivemq.com:1883
+       - MQTT_URL=tcp://192.168.1.25:1883
+       - MQTT_URL=ssl://your-broker.example.com:8883 (for TLS)
+     - If your broker requires auth, also set MQTT_USERNAME and MQTT_PASSWORD.
+   - Optional: If you are not using the local broker, you can ignore or comment out the mosquitto service in docker-compose.yml.
+
+2) Start the stack
    - Windows PowerShell (from project root):
      - docker compose up -d
    - This will bring up services on the following ports:
-     - Mosquitto: tcp 1883 (localhost:1883)
      - InfluxDB: http 8086 (http://localhost:8086)
      - Grafana: http 3000 (http://localhost:3000)
 
-2) Point your ESP32 firmware to the local broker
-   - In include/settings.h set:
-     - MQTT_BROKER to the host IP address reachable by your ESP32 (NOT 127.0.0.1). For example, your laptop IP on the same Wi‑Fi, e.g. "192.168.1.25".
-     - MQTT_PORT to 1883 (default)
+3) Point your ESP32 firmware to YOUR broker (same one Telegraf reads from)
+   - In include/settings.h set MQTT_BROKER and MQTT_PORT to your broker host and port.
+   - If your broker requires auth, set MQTT_USERNAME and MQTT_PASSWORD.
    - Rebuild/flash the firmware.
 
-3) Open Grafana
+4) Open Grafana
    - URL: http://localhost:3000
    - Login: admin / admin (from docker-compose.yml)
    - A pre-provisioned InfluxDB datasource is configured.
    - Dashboard: IIoT DHT11 (auto-provisioned). If you don’t see it, go to Dashboards → Browse and open "IIoT DHT11".
 
-4) Data mapping details
+5) Data mapping details
    - Telegraf subscribes to the following topics (wildcard group):
      - iiot/group/+/sensor/temperature/state
      - iiot/group/+/sensor/humidity/state
@@ -158,14 +165,16 @@ Quick start:
    - It writes to InfluxDB bucket "iiot" with measurement name "reading". Fields: value. Tags: sensor_id, unit, status, topic.
    - The Grafana dashboard queries by unit (°C for temperature, % for humidity) and plots last 6 hours by default.
 
-5) Simulate data without hardware (optional)
+6) Simulate data without hardware (optional)
    - Publish a sample TemperatureReading:
-     - docker exec -it iiot-mosquitto mosquitto_pub -h localhost -t iiot/group/test/sensor/temperature/state -m '{"timestamp":"2025-01-01T12:00:00Z","sensor_id":"temp-1","value":23.1,"unit":"°C","status":"ok"}'
+     - Use a mosquitto_pub or another client against YOUR broker, for example:
+       - mosquitto_pub -h <your-broker-host> -p <port> -t iiot/group/test/sensor/temperature/state -m '{"timestamp":"2025-01-01T12:00:00Z","sensor_id":"temp-1","value":23.1,"unit":"°C","status":"ok"}'
    - Publish a sample HumidityReading:
-     - docker exec -it iiot-mosquitto mosquitto_pub -h localhost -t iiot/group/test/sensor/humidity/state -m '{"timestamp":"2025-01-01T12:00:00Z","sensor_id":"hum-1","value":45,"unit":"%","status":"ok"}'
+       - mosquitto_pub -h <your-broker-host> -p <port> -t iiot/group/test/sensor/humidity/state -m '{"timestamp":"2025-01-01T12:00:00Z","sensor_id":"hum-1","value":45,"unit":"%","status":"ok"}'
    - After a few seconds, Grafana should show values on the "Latest" panels and begin drawing timeseries.
 
 Notes & tips:
-- Ensure your ESP32 and the machine running Docker are on the same network. Use the host IP for MQTT_BROKER.
+- Ensure your ESP32 can reach your MQTT broker and the machine running Docker can reach the same broker from inside the Telegraf container.
+- You can set the Telegraf MQTT settings via environment variables in docker-compose.yml: MQTT_URL, MQTT_USERNAME, MQTT_PASSWORD.
 - Default InfluxDB setup credentials and tokens are defined in docker-compose.yml for local development only. Change them for any shared environment.
 - To stop the stack: docker compose down (data in InfluxDB and Grafana persists via volumes).
