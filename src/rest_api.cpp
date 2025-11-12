@@ -8,6 +8,7 @@
 
 // Internal server instance (port configurable via settings.h)
 static WebServer g_server(REST_API_PORT);
+static bool g_serverStarted = false; // ensure REST API isn't established until Wi‑Fi is connected
 
 // Global runtime config with sensible defaults
 static DeviceConfig g_cfg;
@@ -117,17 +118,38 @@ void initRestApi() {
     g_server.on(REST_API_CONFIG_PATH, HTTP_GET, handleGetConfig);
     g_server.on(REST_API_CONFIG_PATH, HTTP_POST, handlePostConfig);
 
-    g_server.begin();
-    Serial.print("REST API listening on http://");
-    Serial.print(WiFi.localIP());
-    Serial.print(":" );
-    Serial.print(REST_API_PORT);
-    Serial.print(REST_API_CONFIG_PATH);
-    Serial.println();
+    // Defer starting the HTTP server until Wi‑Fi is connected
+    if (WiFi.status() == WL_CONNECTED) {
+        g_server.begin();
+        g_serverStarted = true;
+        Serial.print("REST API listening on http://");
+        Serial.print(WiFi.localIP());
+        Serial.print(":" );
+        Serial.print(REST_API_PORT);
+        Serial.print(REST_API_CONFIG_PATH);
+        Serial.println();
+    } else {
+        g_serverStarted = false;
+        Serial.println("REST API deferred: waiting for Wi‑Fi connection before starting HTTP server");
+    }
 }
 
 void restApiLoop() {
-    g_server.handleClient();
+    // If server hasn't started yet, check if Wi‑Fi is now connected and start it
+    if (!g_serverStarted && WiFi.status() == WL_CONNECTED) {
+        g_server.begin();
+        g_serverStarted = true;
+        Serial.print("REST API listening on http://");
+        Serial.print(WiFi.localIP());
+        Serial.print(":" );
+        Serial.print(REST_API_PORT);
+        Serial.print(REST_API_CONFIG_PATH);
+        Serial.println();
+    }
+
+    if (g_serverStarted) {
+        g_server.handleClient();
+    }
 }
 
 DeviceConfig& getDeviceConfig() {
