@@ -1,126 +1,3 @@
-# Industrial Internet of Things (ESP32 + DHT11 + MQTT + REST)
-
-An ESP32-based reference project that reads temperature and humidity from a DHT11 sensor, publishes data to MQTT, and exposes a lightweight REST API to adjust runtime behavior. Designed for quick lab setups and IIoT coursework.
-
-Key traits:
-- ESP32 (Arduino framework, PlatformIO)
-- DHT11 temperature and humidity sensor
-- MQTT client with reconnect handling and heartbeat
-- Simple REST API for runtime configuration (starts only after Wi‑Fi is connected)
-- JSON payloads suitable for basic dashboards or backends
-
-
-## Features
-- Wi‑Fi connect and auto‑reconnect helpers
-- MQTT client (PubSubClient)
-  - Connects with credentials, auto‑reconnects
-  - Heartbeat to a status topic every 5 seconds
-  - Publishes sensor values and structured JSON readings
-- REST API (Arduino WebServer)
-  - Endpoint: /config (GET, POST, OPTIONS)
-  - CORS enabled (for simple browser tooling)
-  - Server start is deferred until Wi‑Fi is connected
-- Time sync via NTP for ISO‑8601 timestamps (UTC)
-
-
-## Hardware
-- ESP32 board: esp32vn-iot-uno (configurable in platformio.ini)
-- DHT11 sensor
-  - VCC → 3.3V
-  - GND → GND
-  - DATA → GPIO 14 (configurable in include/settings.h via DHT11_PIN)
-
-Note: Some DHT11 breakout boards need a pull‑up resistor (usually included). Consult your module’s pinout.
-
-
-## Project structure
-- include/…
-  - settings.h: Wi‑Fi, MQTT, REST defaults, pins, topics
-  - rest_api.h, wifi_connect.h, mqtt_connect.h, dht_sensor.h
-- src/…
-  - main.cpp: setup/loop orchestration
-  - wifi_connect.cpp: Wi‑Fi connect/reconnect
-  - mqtt_connect.cpp: MQTT client setup/reconnect helpers
-  - dht_sensor.cpp: DHT11 readout
-  - rest_api.cpp: REST server and runtime config
-- platformio.ini: PlatformIO environment and library deps
-
-
-## Quick start
-1) Prerequisites
-- Install VS Code + PlatformIO IDE extension, or use CLion with PlatformIO plugin
-- Alternatively, install PlatformIO Core (CLI)
-
-2) Clone the project
-- Place the folder where your PlatformIO can access it
-
-3) Configure your environment in include/settings.h
-- Wi‑Fi: WIFI_SSID, WIFI_PASSWORD
-- MQTT: MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD
-- Topics: MQTT_BASE_TOPIC, MQTT_GROUP_NAME, MQTT_TOPIC_TEMPERATURE_STATE, MQTT_TOPIC_HUMIDITY_STATE
-- REST: port (REST_API_PORT), endpoint path (REST_API_CONFIG_PATH)
-- Sensor pins and IDs: DHT11_PIN, SENSOR_ID, HUM_SENSOR_ID, units
-
-4) Build and upload (via PlatformIO)
-- From IDE: select env "esp32vn-iot-uno" and click Upload
-- From CLI:
-  - pio run -e esp32vn-iot-uno
-  - pio run -e esp32vn-iot-uno -t upload
-- Serial monitor (115200 baud):
-  - pio device monitor -b 115200
-
-
-## Runtime behavior
-- On boot:
-  - Initializes DHT11 and attempts Wi‑Fi connection (10s timeout)
-  - Initializes REST API routes
-  - REST server will only start (bind port) once Wi‑Fi is connected
-  - Configures NTP and waits briefly for time (to stamp JSON)
-  - Sets up MQTT; subscribes to command topic and publishes "online"
-- In loop():
-  - Auto‑reconnect for Wi‑Fi and MQTT
-  - REST server handles HTTP requests when running
-  - Heartbeat message to status topic every 5s
-  - Periodic DHT11 read; publishes simple status line and JSON readings
-
-
-## MQTT topics and payloads
-- Base topic (configurable): MQTT_BASE_TOPIC (default: iiot/group/test/sensor)
-  - Status: {base}/status
-  - Command: {base}/cmd
-- AsyncAPI-compatible channels (from settings.h):
-  - Temperature state: iiot/group/{GROUP}/sensor/temperature/state
-  - Humidity state:    iiot/group/{GROUP}/sensor/humidity/state
-
-Examples (published when enabled):
-- Simple status line (human-readable):
-  - Topic: {base}/status
-  - Payload: T=23.1C,H=45%
-
-- TemperatureReading JSON:
-  {
-    "timestamp": "2025-01-01T12:00:00Z",  
-    "sensor_id": "temp-1",                 
-    "value": 23.1,                          
-    "unit": "°C",                          
-    "status": "ok"
-  }
-
-- HumidityReading JSON (same structure):
-  {
-    "timestamp": "2025-01-01T12:00:00Z",
-    "sensor_id": "hum-1",
-    "value": 45.0,
-    "unit": "%",
-    "status": "ok"
-  }
-
-Notes:
-- If NTP time is not yet available, timestamp may be an empty string on first messages.
-- SENSOR_ID and HUM_SENSOR_ID are configurable in include/settings.h.
-
-
-## REST API
 - Base URL: http://<esp32-ip>:<REST_API_PORT>
 - Endpoint: REST_API_CONFIG_PATH (default: /config)
 - Methods: OPTIONS, GET, POST
@@ -235,3 +112,60 @@ Notes:
 
 ## License
 This project is intended for educational and lab use. Provide attribution if you reuse significant portions.
+
+## Grafana visualization (Docker Compose stack)
+This project includes an optional, ready-to-run local stack to visualize MQTT data in Grafana. It uses:
+- Mosquitto (MQTT broker)
+- Telegraf (ingests MQTT JSON and writes into InfluxDB)
+- InfluxDB 2.x (time-series database)
+- Grafana (dashboard with temperature and humidity panels)
+
+Files added:
+- docker-compose.yml
+- ops/mosquitto/mosquitto.conf
+- ops/telegraf/telegraf.conf
+- ops/grafana/provisioning/datasources/datasource.yml
+- ops/grafana/provisioning/dashboards/dashboards.yml
+- ops/grafana/dashboards/IIoT DHT11.json
+
+Quick start:
+1) Start the stack
+   - Windows PowerShell (from project root):
+     - docker compose up -d
+   - This will bring up services on the following ports:
+     - Mosquitto: tcp 1883 (localhost:1883)
+     - InfluxDB: http 8086 (http://localhost:8086)
+     - Grafana: http 3000 (http://localhost:3000)
+
+2) Point your ESP32 firmware to the local broker
+   - In include/settings.h set:
+     - MQTT_BROKER to the host IP address reachable by your ESP32 (NOT 127.0.0.1). For example, your laptop IP on the same Wi‑Fi, e.g. "192.168.1.25".
+     - MQTT_PORT to 1883 (default)
+   - Rebuild/flash the firmware.
+
+3) Open Grafana
+   - URL: http://localhost:3000
+   - Login: admin / admin (from docker-compose.yml)
+   - A pre-provisioned InfluxDB datasource is configured.
+   - Dashboard: IIoT DHT11 (auto-provisioned). If you don’t see it, go to Dashboards → Browse and open "IIoT DHT11".
+
+4) Data mapping details
+   - Telegraf subscribes to the following topics (wildcard group):
+     - iiot/group/+/sensor/temperature/state
+     - iiot/group/+/sensor/humidity/state
+   - It expects the JSON payload emitted by this firmware, e.g.:
+     {"timestamp":"2025-01-01T12:00:00Z","sensor_id":"temp-1","value":23.1,"unit":"°C","status":"ok"}
+   - It writes to InfluxDB bucket "iiot" with measurement name "reading". Fields: value. Tags: sensor_id, unit, status, topic.
+   - The Grafana dashboard queries by unit (°C for temperature, % for humidity) and plots last 6 hours by default.
+
+5) Simulate data without hardware (optional)
+   - Publish a sample TemperatureReading:
+     - docker exec -it iiot-mosquitto mosquitto_pub -h localhost -t iiot/group/test/sensor/temperature/state -m '{"timestamp":"2025-01-01T12:00:00Z","sensor_id":"temp-1","value":23.1,"unit":"°C","status":"ok"}'
+   - Publish a sample HumidityReading:
+     - docker exec -it iiot-mosquitto mosquitto_pub -h localhost -t iiot/group/test/sensor/humidity/state -m '{"timestamp":"2025-01-01T12:00:00Z","sensor_id":"hum-1","value":45,"unit":"%","status":"ok"}'
+   - After a few seconds, Grafana should show values on the "Latest" panels and begin drawing timeseries.
+
+Notes & tips:
+- Ensure your ESP32 and the machine running Docker are on the same network. Use the host IP for MQTT_BROKER.
+- Default InfluxDB setup credentials and tokens are defined in docker-compose.yml for local development only. Change them for any shared environment.
+- To stop the stack: docker compose down (data in InfluxDB and Grafana persists via volumes).

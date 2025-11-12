@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB IIoT
+    type: influxdb
+    access: proxy
+    isDefault: true
+    url: ${GRAFANA_INFLUX_URL}
+    jsonData:
+      version: Flux
+      organization: ${GRAFANA_INFLUX_ORG}
+      defaultBucket: ${GRAFANA_INFLUX_BUCKET}
+      tlsSkipVerify: true
+    secureJsonData:
+      token: ${GRAFANA_INFLUX_TOKEN}

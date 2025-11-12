@@ -1,0 +1,82 @@
+{
+  "__inputs": [],
+  "__requires": [
+    {"type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.x"},
+    {"type": "datasource", "id": "influxdb", "name": "InfluxDB", "version": "2.x"}
+  ],
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "iteration": 1,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Latest Temperature",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 0},
+      "targets": [
+        {
+          "datasource": {"type": "influxdb", "uid": "InfluxDB IIoT"},
+          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)",
+          "refId": "A"
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "type": "stat",
+      "title": "Latest Humidity",
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 0},
+      "targets": [
+        {
+          "datasource": {"type": "influxdb", "uid": "InfluxDB IIoT"},
+          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r.unit == \"%\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)",
+          "refId": "A"
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Temperature (last 6h)",
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 6},
+      "targets": [
+        {
+          "datasource": {"type": "influxdb", "uid": "InfluxDB IIoT"},
+          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r.unit == \"°C\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Humidity (last 6h)",
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 6},
+      "targets": [
+        {
+          "datasource": {"type": "influxdb", "uid": "InfluxDB IIoT"},
+          "query": "from(bucket: \"iiot\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"reading\")\n  |> filter(fn: (r) => r.unit == \"%\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["iiot", "mqtt", "dht11"],
+  "templating": {"list": [
+    {
+      "name": "sensor",
+      "type": "query",
+      "datasource": {"type": "influxdb", "uid": "InfluxDB IIoT"},
+      "query": "import \"influxdata/influxdb/v1\"\nv1.tagValues(bucket: \"iiot\", tag: \"sensor_id\")",
+      "includeAll": true,
+      "multi": true
+    }
+  ]},
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "title": "IIoT DHT11",
+  "uid": "iiot-dht11"
+}
