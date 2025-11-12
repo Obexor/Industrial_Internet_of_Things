@@ -198,6 +198,24 @@ Notes:
 - The first build will download the ESP32 toolchain and libraries; subsequent builds are faster due to Docker layer caching.
 
 
+## Testing
+This project includes basic PlatformIO Unit Tests (Unity) that validate compile-time settings and REST config defaults.
+
+What’s covered:
+- settings.h topic/channel constants expand to the expected strings
+- initRestApi() seeds DeviceConfig with defaults from settings.h (server start is deferred until Wi‑Fi connects, so the test runs without network)
+
+Run tests from your host:
+- pio test -e esp32vn-iot-uno
+
+Run tests using the Docker image:
+- docker run --rm -v ${PWD}:/workspace -w /workspace iiot-esp32 pio test -e esp32vn-iot-uno
+
+Notes:
+- Tests are in the test/ folder and use Arduino + Unity test runner.
+- They don’t require actual Wi‑Fi, MQTT, or sensors; hardware peripherals are not exercised.
+
+
 ## Troubleshooting
 - Wi‑Fi won’t connect:
   - Verify WIFI_SSID/WIFI_PASSWORD in include/settings.h
