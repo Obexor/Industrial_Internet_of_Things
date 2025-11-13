@@ -1,3 +1,9 @@
+# IIoT - MA-MECH-24-BB - Obwexer - Poell
+
+This repository contains a lightweight Industrial Internet of Things (IIoT) firmware and tooling for an ESP32-based lab project. The device reads temperature and humidity from a DHT11 sensor and publishes JSON messages to MQTT topics suitable for downstream processing and dashboards. Runtime behavior (status, send interval, which sensors to publish, and sensor IDs) can be inspected and changed via a simple REST API endpoint on the ESP32.
+
+For quick visualization and local testing, an optional Docker Compose stack is provided (Telegraf → InfluxDB → Grafana) with a prebuilt dashboard. All connectivity, topics, and defaults are configured in include/settings.h so you can adapt the firmware to your Wi‑Fi and MQTT broker in minutes.
+
 - Base URL: http://<esp32-ip>:<REST_API_PORT>
 - Endpoint: REST_API_CONFIG_PATH (default: /config)
 - Methods: OPTIONS, GET, POST
@@ -29,6 +35,47 @@ Rules and notes:
 - Changing status sets an internal flag to publish the new status once on MQTT
 - Server only starts after Wi‑Fi connects; until then, requests won’t be served
 
+
+## Configure include/settings.h (step-by-step)
+
+Before building/flashing, open include/settings.h and set the basic connectivity and topic settings for your environment.
+
+1) Wi‑Fi (required)
+- WIFI_SSID and WIFI_PASSWORD
+
+2) MQTT broker (required)
+- MQTT_BROKER and MQTT_PORT
+- Optionally set MQTT_USERNAME and MQTT_PASSWORD if your broker requires auth
+- Optionally change MQTT_CLIENT_ID (must be unique per device)
+
+3) REST API defaults (optional)
+- REST_API_PORT and REST_API_CONFIG_PATH
+- REST_DEFAULT_* values (status, send interval, publish toggles)
+
+4) Hardware pin
+- DHT11_PIN should match your wiring (GPIO number on ESP32)
+
+Example snippet (edit placeholders):
+
+```c
+// Wi‑Fi
+#define WIFI_SSID "YOUR_SSID"
+#define WIFI_PASSWORD "YOUR_PASSWORD"
+
+// MQTT
+#define MQTT_BROKER "192.168.1.10"   // or broker.hivemq.com
+#define MQTT_PORT xxxx                // default 1883
+#define MQTT_USERNAME ""            // leave empty if not required
+#define MQTT_PASSWORD ""
+
+// Hardware pin
+#define DHT11_PIN 14
+```
+
+Notes:
+- If you change REST_DEFAULT_SEND_INTERVAL_MS, minimum 1000 ms is enforced at runtime.
+- The firmware publishes a one-time status message on MQTT when status changes via REST.
+- The HTTP server starts only after Wi‑Fi connects.
 
 ## Configuration reference (include/settings.h)
 - Wi‑Fi: WIFI_SSID, WIFI_PASSWORD
@@ -200,3 +247,5 @@ Notes & tips:
 - You can set the Telegraf MQTT settings via environment variables in docker-compose.yml: MQTT_URL, MQTT_USERNAME, MQTT_PASSWORD.
 - Default InfluxDB setup credentials and tokens are defined in docker-compose.yml for local development only. Change them for any shared environment.
 - To stop the stack: docker compose down (data in InfluxDB and Grafana persists via volumes).
+
+
